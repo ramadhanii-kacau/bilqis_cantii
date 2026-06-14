@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>sayang bilqis ✦</title>
+
+  <!-- ORIGINAL styles (untouched) -->
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- CINEMATIC ENHANCEMENT styles (loads after, higher cascade priority) -->
+  <link rel="stylesheet" href="enhance.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════
+       SCENE 0 — START SCREEN
+  ═══════════════════════════════════════════════ -->
+  <section id="scene-start" class="scene active">
+    <canvas id="cvs-start" class="matrix-cvs"></canvas>
+
+    <div class="center-box">
+      <div class="label">HAPPY BIRTHDAY DUDUDDDD</div>
+      <button class="play-btn" id="play-btn-main" onclick="startShow(); console.log('▶ Play button clicked via onclick');">
+        <svg viewBox="0 0 24 24">
+          <path d="M5 3l14 9-14 9V3z"/>
+        </svg>
+        <span>PLAY</span>
+      </button>
+      <div class="label dim"> </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════
+       SCENE 1 — COUNTDOWN
+  ═══════════════════════════════════════════════ -->
+  <section id="scene-1" class="scene">
+    <canvas id="cvs-1" class="matrix-cvs full-opacity"></canvas>
+    <div id="s1-content" class="center-box"></div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════
+       SCENE 2 — HAPPY BIRTHDAY
+  ═══════════════════════════════════════════════ -->
+  <section id="scene-2" class="scene">
+    <canvas id="cvs-2" class="matrix-cvs"></canvas>
+
+    <div class="center-box hbd-box">
+      <div id="s2-candles" class="hbd-row"   data-dir="top"></div>
+      <div id="s2-happy"   class="hbd-row"   data-dir="left"></div>
+      <div id="s2-bday"    class="hbd-row"   data-dir="right"></div>
+      <div id="s2-name"    class="hbd-name"  data-dir="scale"> sayangg </div>
+      <div id="s2-sub"     class="hbd-sub"   data-dir="up">✦ bilqis salsabila ✦</div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════
+       SCENE 3 — CAROUSEL / PHOTO SLIDER
+  ═══════════════════════════════════════════════ -->
+  <section id="scene-3" class="scene">
+    <canvas id="cvs-3" class="matrix-cvs"></canvas>
+
+    <div class="center-box" style="max-width:460px;">
+      <div class="card">
+        <div class="card-head">
+          fotoo perinsess nyaa wildannnn
+          <span>foto terbaik</span>
+        </div>
+
+        <div class="slider-wrap">
+          <div id="s3-track" class="slider-track"></div>
+          <button class="nav prev" id="btn-prev">&#8249;</button>
+          <button class="nav next" id="btn-next">&#8250;</button>
+        </div>
+
+        <div id="s3-dots" class="dots"></div>
+
+        <button class="cta" id="btn-love">
+          ♥ &nbsp; buka surat cinta 
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════
+       SCENE 4 — LOVE HEART
+  ═══════════════════════════════════════════════ -->
+  <section id="scene-4" class="scene">
+    <canvas id="cvs-4" class="matrix-cvs"></canvas>
+
+    <div class="love-scene-wrap">
+      <div class="love-title">✦ perinsess yangggg cantiiiiii ✦</div>
+      <div id="heart-stage"></div>
+      <!-- <button class="ghost-btn" onclick="restartShow()">← ulang</button> -->
+      <!-- <button class="ghost-btn"></button> -->
+      
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════
+       SCRIPTS — load order matters:
+       1. script.js    : core engine (defines globals)
+       2. three-scene  : 3D bg (loads its own CDN)
+       3. enhance.js   : patches globals, adds UI
+       4. animation.js : GSAP (loads its own CDN, patches again)
+       5. audio.js     : audio system
+
+       GSAP patches happen in animation.js after GSAP CDN loads,
+       so it must run last to be the final wrapper on fadeToScene.
+  ═══════════════════════════════════════════════ -->
+  <script src="script.js"></script>
+  <script src="three-scene.js"></script>
+  <script src="enhance.js"></script>
+  <script src="animation.js"></script>
+  <script src="audio.js"></script>
+
+  
+  <script>
+  (function fixPlayButtonFinal() {
+    function enforce() {
+      // 1. The play button: make it absolutely clickable
+      var btn = document.getElementById('play-btn-main') || document.querySelector('.play-btn');
+      if (btn) {
+        btn.style.position     = 'relative';
+        btn.style.zIndex       = '9000';      // nuclear option: above everything
+        btn.style.pointerEvents = 'all';
+
+        // Validate computed style
+        var cs = window.getComputedStyle(btn);
+        console.log('[fix] play-btn computed z-index:', cs.zIndex, '| pointer-events:', cs.pointerEvents);
+      }
+
+      // 2. Kill pointer-events on ALL non-interactive overlays
+      var killList = [
+        '#three-bg', '#three-bg canvas',
+        '#cinematic-overlay', '#grain-canvas', '#scanlines', '#vignette',
+        '#letterbox-top', '#letterbox-bottom',
+        '#transition-flash', '#start-orbs',
+        '.lux-ring', '.orb', '.shockwave', '.chroma-r', '.chroma-b',
+        '.sparkle-float', '.heart-float', '.lux-heart-ring',
+        '.btn-ripple', '.click-particle',
+        '#lux-cursor', '#lux-cursor-dot',
+        '#perf-monitor', '#audio-visualiser'
+      ];
+
+      killList.forEach(function(sel) {
+        document.querySelectorAll(sel).forEach(function(el) {
+          el.style.pointerEvents = 'none';
+        });
+      });
+
+      // 3. Ensure active scene passes events
+      var activeScene = document.querySelector('.scene.active');
+      if (activeScene) {
+        activeScene.style.pointerEvents = 'all';
+      }
+
+      console.log('[fix] ✓ Pointer-events enforcement complete.');
+    }
+
+    // Run immediately
+    enforce();
+
+    // Run again after a delay (for CDN-loaded scripts)
+    setTimeout(enforce, 500);
+    setTimeout(enforce, 1200);
+    setTimeout(enforce, 2500);
+
+    // Also run whenever scene changes
+    var observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(m) {
+        if (m.attributeName === 'class') {
+          enforce();
+        }
+      });
+    });
+    observer.observe(document.body, { subtree: true, attributeFilter: ['class'] });
+  })();
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,682 @@
+/*
+╔══════════════════════════════════════════════════════════════════╗
+║  enhance.css — Cinematic Enhancement Styles (FIXED)              ║
+║                                                                  ║
+║  BUG FIX v2:                                                     ║
+║  Root cause 1: .lux-ring had no pointer-events:none             ║
+║    → large rings (up to 210px) were positioned over .play-btn   ║
+║    → .scene.active * { pointer-events:all } made them eat clicks ║
+║  Root cause 2: #three-bg canvas needed explicit isolation        ║
+║  Root cause 3: play-btn z-index not high enough in stack         ║
+║  Fix: pointer-events:none on ALL decorative/overlay elements     ║
+╚══════════════════════════════════════════════════════════════════╝
+*/
+
+/* ═══════════════════════════════════════════════════════
+   0. GOOGLE FONTS — Cinematic luxury typography
+═══════════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Bebas+Neue&family=DM+Sans:wght@300;400&display=swap');
+
+/* Override font tokens non-destructively via cascade */
+:root {
+  --f-display  : 'Bebas Neue', 'Arial Black', sans-serif;
+  --f-serif    : 'Cormorant Garamond', Georgia, serif;
+  --f-sans     : 'DM Sans', 'Segoe UI', sans-serif;
+
+  /* Gold accent layer (additive — original pink still usable) */
+  --gold       : #c9a84c;
+  --gold-60    : rgba(201,168,76,.60);
+  --gold-30    : rgba(201,168,76,.30);
+  --gold-12    : rgba(201,168,76,.12);
+  --glow-gold  : 0 0 18px var(--gold), 0 0 36px rgba(201,168,76,.4);
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   1. CUSTOM CURSOR
+═══════════════════════════════════════════════════════ */
+* { cursor: none !important; }
+
+#lux-cursor {
+  position: fixed;
+  width: 38px; height: 38px;
+  border: 1.5px solid var(--acc-60);
+  border-radius: 50%;
+  pointer-events: none !important;
+  z-index: 99999;
+  margin-left: -19px; margin-top: -19px;
+  transition: transform 0.08s ease, border-color 0.3s ease, background 0.3s ease, width 0.25s ease, height 0.25s ease;
+  /* FIX: removed mix-blend-mode:difference — it caused compositing issues that
+     could make the cursor div intercept hit-testing in some browsers */
+}
+#lux-cursor.hovered {
+  width: 56px; height: 56px;
+  margin-left: -28px; margin-top: -28px;
+  border-color: var(--acc);
+  background: var(--acc-12);
+}
+#lux-cursor.clicked {
+  width: 26px; height: 26px;
+  margin-left: -13px; margin-top: -13px;
+  background: var(--acc-30);
+}
+
+#lux-cursor-dot {
+  position: fixed;
+  width: 5px; height: 5px;
+  background: var(--acc);
+  border-radius: 50%;
+  pointer-events: none !important;
+  z-index: 99999;
+  margin-left: -2.5px; margin-top: -2.5px;
+  box-shadow: 0 0 6px var(--acc);
+}
+
+/* Click burst particles */
+.click-particle {
+  position: fixed;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--acc);
+  pointer-events: none !important;
+  z-index: 99998;
+  transform: translate(-50%, -50%);
+  animation: particleBurst 0.65s ease-out forwards;
+}
+@keyframes particleBurst {
+  0%   { transform: translate(calc(-50% + 0px), calc(-50% + 0px)) scale(1); opacity:1; }
+  100% { transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0); opacity:0; }
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   2. CINEMATIC OVERLAY (grain + scanlines + vignette)
+═══════════════════════════════════════════════════════ */
+#cinematic-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none !important;
+  overflow: hidden;
+}
+
+/* Film grain canvas — tiles across screen */
+#grain-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  opacity: 0.04;
+  mix-blend-mode: overlay;
+  image-rendering: pixelated;
+  pointer-events: none !important;
+  background-repeat: repeat;
+}
+
+/* Scanlines */
+#scanlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none !important;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 3px,
+    rgba(0,0,0,0.04) 3px,
+    rgba(0,0,0,0.04) 4px
+  );
+}
+
+/* Vignette */
+#vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none !important;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 38%,
+    rgba(0,0,0,0.45) 75%,
+    rgba(0,0,0,0.82) 100%
+  );
+}
+
+/* Letterbox bars */
+#letterbox-top,
+#letterbox-bottom {
+  position: absolute;
+  left: 0; right: 0;
+  height: 0;
+  background: #000;
+  pointer-events: none !important;
+  transition: height 0.8s cubic-bezier(.65,0,.35,1);
+}
+#letterbox-top    { top: 0; }
+#letterbox-bottom { bottom: 0; }
+
+/* Activate letterbox during transitions */
+body.transitioning #letterbox-top,
+body.transitioning #letterbox-bottom {
+  height: 40px;
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   3. TRANSITION FLASH
+═══════════════════════════════════════════════════════ */
+#transition-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  pointer-events: none !important;
+  background: var(--acc);
+  opacity: 0;
+}
+@keyframes flashIn  { to { opacity: 0.08; } }
+@keyframes flashOut { to { opacity: 0; } }
+
+
+/* ═══════════════════════════════════════════════════════
+   4. BUTTON RIPPLE
+═══════════════════════════════════════════════════════ */
+.btn-ripple {
+  position: absolute;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.35);
+  transform: translate(-50%, -50%) scale(0);
+  animation: btnRipple 0.65s ease-out forwards;
+  pointer-events: none !important;
+}
+@keyframes btnRipple {
+  to { transform: translate(-50%, -50%) scale(25); opacity: 0; }
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   5. START SCREEN ENHANCEMENTS
+═══════════════════════════════════════════════════════ */
+#start-orbs {
+  position: absolute;
+  inset: 0;
+  pointer-events: none !important;
+  z-index: 2;
+  overflow: hidden;
+}
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.15;
+  pointer-events: none !important;
+  animation: orbDrift 8s ease-in-out infinite;
+}
+.orb-1 {
+  width: 500px; height: 500px;
+  background: var(--acc);
+  top: -200px; left: -150px;
+  animation-delay: 0s;
+}
+.orb-2 {
+  width: 400px; height: 400px;
+  background: #1052cc;
+  bottom: -180px; right: -120px;
+  animation-delay: -3s;
+}
+.orb-3 {
+  width: 300px; height: 300px;
+  background: #6a92ff;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  animation-delay: -5s;
+}
+@keyframes orbDrift {
+  0%,100% { transform: translate(0,0); }
+  33%      { transform: translate(30px, -25px); }
+  66%      { transform: translate(-20px, 20px); }
+}
+
+/* ─────────────────────────────────────────────────────────
+   FIX #1 — PLAY BUTTON Z-INDEX & POINTER EVENTS
+   The .play-btn and its parent .center-box must sit above
+   all decorative layers. We explicitly hoist it.
+───────────────────────────────────────────────────────── */
+.play-btn {
+  position: relative;
+  z-index: 200 !important;   /* above scene z-index:100, above any ring */
+  pointer-events: all !important;
+}
+
+/* FIX #2 — .lux-ring elements (the pulse rings around play button)
+   were the PRIMARY CULPRIT:
+   - width up to 210px, absolutely positioned over the button
+   - .scene.active * { pointer-events:all } made them intercept clicks
+   - Fix: always pointer-events:none, and z-index BELOW the button */
+.lux-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid var(--acc-30);
+  pointer-events: none !important;   /* ← THE KEY FIX */
+  z-index: 1 !important;             /* ← always behind button */
+  animation: luxRipple 3s ease-out infinite;
+}
+.lux-ring-1 { width: 120px; height: 120px; margin: -60px;  animation-delay: 0s; }
+.lux-ring-2 { width: 160px; height: 160px; margin: -80px;  animation-delay: 0.8s; }
+.lux-ring-3 { width: 210px; height: 210px; margin: -105px; animation-delay: 1.6s; }
+
+@keyframes luxRipple {
+  0%   { transform: scale(0.8); opacity: 0.7; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   6. SCENE 1 — COUNTDOWN ENHANCEMENT
+═══════════════════════════════════════════════════════ */
+
+/* Chromatic aberration ghost layers */
+.chroma-r {
+  position: absolute;
+  top: 0; left: 0;
+  color: #ff0000 !important;
+  opacity: 0;
+  mix-blend-mode: screen;
+  animation: chromaR 0.5s ease-out forwards;
+  pointer-events: none !important;
+}
+.chroma-b {
+  position: absolute;
+  top: 0; left: 0;
+  color: #0000ff !important;
+  opacity: 0;
+  mix-blend-mode: screen;
+  animation: chromaB 0.5s ease-out forwards;
+  pointer-events: none !important;
+}
+@keyframes chromaR {
+  0%   { transform: translate(-6px, 0); opacity: 0.5; }
+  100% { transform: translate(-14px, 0); opacity: 0; }
+}
+@keyframes chromaB {
+  0%   { transform: translate(6px, 0); opacity: 0.5; }
+  100% { transform: translate(14px, 0); opacity: 0; }
+}
+
+/* Shockwave ring */
+.shockwave {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 100px; height: 100px;
+  border: 2px solid var(--acc-60);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  pointer-events: none !important;
+  animation: shockwaveExpand 0.85s cubic-bezier(0.21,0.73,0.29,1) forwards;
+}
+@keyframes shockwaveExpand {
+  0%   { transform: translate(-50%,-50%) scale(0); opacity:1; }
+  100% { transform: translate(-50%,-50%) scale(12); opacity:0; }
+}
+
+/* Screen shake */
+@keyframes screenShake {
+  0%,100% { transform: translate(0,0); }
+  20%      { transform: translate(-5px, 3px); }
+  40%      { transform: translate(4px, -4px); }
+  60%      { transform: translate(-3px, 2px); }
+  80%      { transform: translate(3px, -1px); }
+}
+#scene-1.shake {
+  animation: screenShake 0.38s ease-out;
+}
+
+/* Override big-num & big-word fonts with display font */
+.big-num  { font-family: var(--f-display) !important; }
+.big-word { font-family: var(--f-display) !important; }
+
+
+/* ═══════════════════════════════════════════════════════
+   7. SCENE 2 — HBD ENHANCEMENT
+═══════════════════════════════════════════════════════ */
+.hbd-letter  { font-family: var(--f-display) !important; }
+.hbd-name    { font-family: var(--f-display) !important; }
+
+/* Letter shimmer on hover */
+.hbd-letter:hover {
+  filter: brightness(1.4) hue-rotate(15deg) !important;
+  transform: scale(1.15) translateY(-4px) !important;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+/* Sub-title: elegant serif */
+.hbd-sub { font-family: var(--f-serif) !important; font-style: italic; font-size: clamp(11px, 2.5vw, 16px) !important; }
+
+
+/* ═══════════════════════════════════════════════════════
+   8. SCENE 3 — CAROUSEL ENHANCEMENT
+═══════════════════════════════════════════════════════ */
+/* Sparkle particles */
+.sparkle-float {
+  position: absolute;
+  color: var(--gold);
+  pointer-events: none !important;
+  animation: sparkleRise 4s ease-out forwards;
+  z-index: 6;
+  text-shadow: 0 0 8px var(--gold);
+}
+@keyframes sparkleRise {
+  0%   { transform: translateY(0) rotate(0deg);   opacity: 1; }
+  100% { transform: translateY(-300px) rotate(180deg); opacity: 0; }
+}
+
+/* Card — upgraded font treatment */
+.card-head { font-family: var(--f-display) !important; letter-spacing: 6px !important; }
+.card-head span { font-family: var(--f-serif) !important; font-style: italic; }
+
+/* CTA button: luxury border treatment */
+.cta {
+  border-image: none !important;
+  position: relative;
+  overflow: hidden;
+}
+.cta::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: -100%;
+  width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  transform: skewX(-20deg) translateY(-50%);
+  transition: left 0.55s ease;
+  pointer-events: none !important;
+}
+.cta:hover::after { left: 150%; }
+
+
+/* ═══════════════════════════════════════════════════════
+   9. SCENE 4 — LOVE HEART ENHANCEMENT
+═══════════════════════════════════════════════════════ */
+.love-title { font-family: var(--f-display) !important; }
+
+/* FIX LAYOUT: overflow visible agar hover glow tidak terpotong oleh parent */
+.love-photo {
+  overflow: visible !important;
+  transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+}
+
+/* FIX LAYOUT: img yang clip ke lingkaran, bukan div-nya */
+.love-photo img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  display: block !important;
+  border-radius: 50% !important;
+  vertical-align: top;
+}
+
+.love-photo:hover {
+  transform: scale(1.25) !important;
+  box-shadow:
+    0 0 24px rgb(45, 101, 255),
+    0 0 50px rgba(45, 94, 255, 0.6),
+    0 0 90px rgba(45, 104, 255, 0.3) !important;
+  z-index: 10 !important;
+}
+
+/* Heart stage overflow visible agar hover tidak terpotong */
+#heart-stage { overflow: visible !important; }
+
+/* Heart stage ambient glow rings — MUST be pointer-events:none */
+.lux-heart-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid var(--acc-30);
+  pointer-events: none !important;
+  animation: heartRingPulse 3.5s ease-in-out infinite;
+  top: 0; left: 0;
+}
+.lux-heart-ring-1 { animation-delay: 0s; }
+.lux-heart-ring-2 { animation-delay: 0.8s; border-color: var(--acc-60); }
+.lux-heart-ring-3 { animation-delay: 1.6s; }
+
+@keyframes heartRingPulse {
+  0%,100% { opacity: 0.3; transform: scale(1); }
+  50%      { opacity: 0.7; transform: scale(1.04); }
+}
+
+/* ── FIX SCENE 4: Play Again Button ── */
+#play-again-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 32px;
+  margin-top: 10px;
+  background: transparent;
+  border: 1.5px solid var(--acc-60);
+  border-radius: 50px;
+  font-family: var(--f-display), 'Arial Black', sans-serif;
+  font-size: clamp(11px, 2.5vw, 14px);
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: var(--acc);
+  text-shadow: 0 0 18px var(--acc), 0 0 36px rgba(45, 143, 255, 0.45);
+  cursor: none;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.3s, border-color 0.3s, transform 0.2s, box-shadow 0.3s;
+  animation: fadeUp 0.8s cubic-bezier(.34,1.56,.64,1) 0.5s both;
+  pointer-events: all !important;
+  z-index: 200;
+}
+#play-again-btn svg {
+  width: 14px; height: 14px;
+  stroke: var(--acc); fill: none; stroke-width: 2;
+  flex-shrink: 0;
+  transition: transform 0.4s ease;
+}
+#play-again-btn:hover {
+  background: var(--acc-12);
+  border-color: var(--acc);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 28px rgba(45, 125, 255, 0.4), 0 0 60px rgba(45, 157, 255, 0.2);
+}
+#play-again-btn:hover svg { transform: rotate(-30deg) scale(1.15); }
+#play-again-btn::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: -100%;
+  width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  transform: skewX(-20deg) translateY(-50%);
+  transition: left 0.55s ease;
+  pointer-events: none !important;
+}
+#play-again-btn:hover::after { left: 150%; }
+
+
+/* ═══════════════════════════════════════════════════════
+   10. AUDIO TOGGLE BUTTON
+═══════════════════════════════════════════════════════ */
+#audio-toggle {
+  position: fixed;
+  top: 18px; right: 18px;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--acc-30);
+  background: rgba(0,0,0,0.6);
+  color: var(--acc);
+  cursor: none;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+  transition: border-color 0.3s, background 0.3s;
+  pointer-events: all !important;
+}
+#audio-toggle svg { width: 18px; height: 18px; stroke: var(--acc); }
+#audio-toggle:hover { border-color: var(--acc); background: var(--acc-12); }
+#audio-toggle.muted svg { stroke: rgba(255,255,255,0.3); }
+#audio-toggle.muted { border-color: rgba(255,255,255,0.15); animation: none !important; box-shadow: none !important; }
+
+/* FIX AUDIO: glow pulse saat musik aktif */
+#audio-toggle:not(.muted) {
+  animation: audioToggleGlow 2s ease-in-out infinite;
+}
+@keyframes audioToggleGlow {
+  0%,100% { box-shadow: 0 0 8px rgba(45, 118, 255, 0.3); }
+  50%      { box-shadow: 0 0 20px rgba(45, 122, 255, 0.7), 0 0 40px rgba(45, 129, 255, 0.3); }
+}
+
+/* FIX AUDIO: visualiser di atas segalanya */
+#audio-visualiser {
+  z-index: 99994 !important;
+  pointer-events: none !important;
+}
+
+/* Wave paths in icon */
+#audio-wave-1, #audio-wave-2 {
+  transition: opacity 0.3s;
+}
+#audio-toggle.muted #audio-wave-1,
+#audio-toggle.muted #audio-wave-2 { opacity: 0; }
+
+
+/* ═══════════════════════════════════════════════════════
+   11. PERF MONITOR (dev only)
+═══════════════════════════════════════════════════════ */
+#perf-monitor {
+  position: fixed;
+  bottom: 10px; left: 10px;
+  font-family: monospace;
+  font-size: 10px;
+  color: #4f4;
+  z-index: 9999;
+  pointer-events: none !important;
+  opacity: 0.6;
+  text-shadow: 0 0 4px currentColor;
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   12. PLAY BUTTON — luxury label override
+═══════════════════════════════════════════════════════ */
+.play-btn span { font-family: var(--f-display) !important; font-size: 12px !important; letter-spacing: 5px !important; }
+.ghost-btn     { font-family: var(--f-display) !important; letter-spacing: 4px !important; }
+
+
+/* ═══════════════════════════════════════════════════════
+   13. THREE.JS BACKGROUND LAYER
+═══════════════════════════════════════════════════════ */
+#three-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 1 !important;
+  pointer-events: none !important;
+}
+
+/* ══════════════════════════════════════════════════════
+   !! CORE Z-INDEX & POINTER-EVENTS FIX !! (v2 HARDENED)
+
+   Z-INDEX STACK (low → high):
+   1  — #three-bg (3D particles, never interactive)
+   5  — #cinematic-overlay (grain/scanlines/vignette, never interactive)
+   100 — .scene (base layer for inactive scenes)
+   150 — .scene.active (interactive layer)
+   200 — .play-btn, buttons, interactive elements
+   999 — #transition-flash (brief flash, never interactive)
+   9999 — #audio-toggle (always-on control)
+   99999 — #lux-cursor, #lux-cursor-dot (purely visual)
+
+   POINTER-EVENTS RULES:
+   - Every purely visual / overlay element: none !important
+   - .scene.active and its interactive children: all
+   - .lux-ring: NEVER intercepts clicks (critical fix)
+══════════════════════════════════════════════════════ */
+
+/* Layer 1: Three.js bg — absolute bottom, never interactive */
+#three-bg,
+#three-bg canvas {
+  z-index: 1 !important;
+  pointer-events: none !important;
+}
+
+/* Layer 2: Cinematic overlay — decorative only */
+#cinematic-overlay,
+#cinematic-overlay * {
+  z-index: 5 !important;
+  pointer-events: none !important;
+}
+
+/* Layer 3: All scenes — base stacking */
+.scene { z-index: 100 !important; }
+
+/* Layer 4: Active scene is interactive */
+.scene.active { pointer-events: all !important; }
+
+/* Layer 5: Inactive scenes — completely dead to events */
+.scene:not(.active) { pointer-events: none !important; }
+.scene:not(.active) * { pointer-events: none !important; }
+
+/* Layer 6: Decorative elements inside active scene — NEVER intercept */
+/* This is the key fix for .lux-ring, .orb, .shockwave, etc. */
+.lux-ring,
+.orb,
+#start-orbs,
+.shockwave,
+.chroma-r,
+.chroma-b,
+.sparkle-float,
+.heart-float,
+.lux-heart-ring,
+.btn-ripple,
+.click-particle,
+#grain-canvas,
+#scanlines,
+#vignette,
+#letterbox-top,
+#letterbox-bottom {
+  pointer-events: none !important;
+}
+
+/* Layer 7: Interactive elements in active scene — explicit all */
+.scene.active .play-btn,
+.scene.active button,
+.scene.active .nav,
+.scene.active .dot,
+.scene.active .cta,
+.scene.active .ghost-btn {
+  pointer-events: all !important;
+  position: relative;
+  z-index: 200;
+}
+
+/* Layer 8: Transition flash — above scenes but never interactive */
+#transition-flash { z-index: 999 !important; pointer-events: none !important; }
+
+/* Layer 9: Always-on UI controls */
+#audio-toggle    { z-index: 99999 !important; pointer-events: all !important; }
+
+/* Layer 10: Cursor — topmost, visual only */
+#lux-cursor,
+#lux-cursor-dot  { z-index: 999999 !important; pointer-events: none !important; }
+#audio-visualiser { z-index: 99994 !important; pointer-events: none !important; }
+#perf-monitor    { z-index: 99993 !important; pointer-events: none !important; }
+
+
+/* ═══════════════════════════════════════════════════════
+   14. GLOBAL TYPOGRAPHY UPGRADES
+═══════════════════════════════════════════════════════ */
+.label { font-family: var(--f-display) !important; }
+
+/* Smooth anti-aliasing */
+*, *::before, *::after {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Selection colour */
+::selection {
+  background: var(--acc-30);
+  color: #fff;
+}

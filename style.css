@@ -1,0 +1,586 @@
+/*
+╔══════════════════════════════════════════════════════════════════╗
+║  style.css — Happy Birthday Nabila                               ║
+╚══════════════════════════════════════════════════════════════════╝
+*/
+
+
+/* ───────────────────────────────────────────────────
+   1. RESET & TOKEN
+─────────────────────────────────────────────────── */
+:root {
+  --bg      : #000000;
+  --acc     : #2d65ff;
+  --acc-60  : rgba(45, 55, 255, 0.6);
+  --acc-30  : rgba(45, 90, 255, 0.3);
+  --acc-12  : rgba(45, 66, 255, 0.12);
+  --white   : #ffffff;
+  --muted   : rgba(255,255,255,.35);
+
+  --glow-s  : 0 0 18px var(--acc), 0 0 36px rgba(45, 101, 255, 0.45);
+  --glow-m  : 0 0 26px var(--acc), 0 0 55px rgba(45, 73, 255, 0.5);
+  --glow-l  : 0 0 38px var(--acc), 0 0 76px rgba(45, 55, 255, 0.5),
+              0 0 120px rgba(45, 104, 255, 0.25);
+
+  --f-head  : 'Arial Black', 'Arial Bold', sans-serif;
+  --f-body  : 'Segoe UI', sans-serif;
+
+  --ease-bounce : cubic-bezier(.34,1.56,.64,1);
+  --ease-smooth : cubic-bezier(.65,0,.35,1);
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+html, body {
+  width:100%; height:100%;
+  overflow:hidden;
+  background: var(--bg);
+  font-family: var(--f-body);
+}
+
+
+/* ───────────────────────────────────────────────────
+   2. SCENE SYSTEM
+─────────────────────────────────────────────────── */
+.scene {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.scene.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.center-box {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(8px, 2.2vh, 18px);
+  padding: 16px;
+  width: 100%;
+}
+
+
+/* ───────────────────────────────────────────────────
+   3. MATRIX CANVAS
+─────────────────────────────────────────────────── */
+.matrix-cvs {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  opacity: .16;
+}
+
+.matrix-cvs.full-opacity { opacity: 1; }
+
+
+/* ───────────────────────────────────────────────────
+   4. SCENE 0 — START SCREEN
+─────────────────────────────────────────────────── */
+.label {
+  font-family: var(--f-head);
+  font-size: clamp(11px, 2.8vw, 17px);
+  letter-spacing: 8px;
+  text-transform: uppercase;
+  color: var(--acc);
+  text-shadow: var(--glow-s);
+}
+.label.dim {
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 5px;
+  text-shadow: none;
+}
+
+.play-btn {
+  position: relative;
+  width: 94px;
+  height: 94px;
+  border-radius: 50%;
+  border: 1.5px solid var(--acc-60);
+  background: transparent;
+  color: var(--white);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: background .3s, border-color .3s, transform .3s;
+}
+.play-btn svg  { width:28px; height:28px; fill:var(--white); }
+.play-btn span { font-size:9px; letter-spacing:4px; color:var(--muted); }
+.play-btn:hover {
+  background: var(--acc-12);
+  border-color: var(--acc);
+  transform: scale(1.07);
+}
+
+.play-btn::before,
+.play-btn::after {
+  content:'';
+  position:absolute;
+  border-radius:50%;
+  border:1px solid var(--acc-30);
+  animation: ripple 2.2s ease-out infinite;
+}
+.play-btn::before { inset:-14px; }
+.play-btn::after  { inset:-28px; animation-delay:.65s; }
+
+
+/* ───────────────────────────────────────────────────
+   5. SCENE 1 — COUNTDOWN
+─────────────────────────────────────────────────── */
+.big-num {
+  font-family: var(--f-head);
+  font-size: clamp(110px, 28vw, 210px);
+  font-weight: 900;
+  color: var(--acc);
+  text-shadow: var(--glow-l);
+  line-height: 1;
+  animation: pop .32s var(--ease-bounce) both;
+}
+
+.big-word {
+  font-family: var(--f-head);
+  font-size: clamp(30px, 9vw, 80px);
+  font-weight: 900;
+  color: var(--acc);
+  text-shadow: var(--glow-m);
+  letter-spacing: 8px;
+  text-align: center;
+  animation: slideUp .5s var(--ease-bounce) both;
+}
+
+
+/* ───────────────────────────────────────────────────
+   6. SCENE 2 — HAPPY BIRTHDAY
+─────────────────────────────────────────────────── */
+.hbd-box { gap: clamp(6px, 1.8vh, 14px); }
+
+.hbd-row {
+  display: flex;
+  gap: 5px;
+  align-items: flex-end;
+}
+
+.hbd-row,
+.hbd-name,
+.hbd-sub { opacity: 0; }
+
+[data-dir="top"].show   { animation: fromTop   .65s var(--ease-bounce) forwards; }
+[data-dir="left"].show  { animation: fromLeft  .65s var(--ease-bounce) forwards; }
+[data-dir="right"].show { animation: fromRight .65s var(--ease-bounce) forwards; }
+[data-dir="scale"].show { animation: scaleIn   .65s var(--ease-bounce) forwards; }
+[data-dir="up"].show    { animation: fadeUp    .65s var(--ease-bounce) forwards; }
+
+.candle { display:flex; flex-direction:column; align-items:center; }
+
+.flame {
+  width:10px; height:18px;
+  background: radial-gradient(
+    ellipse at 50% 100%,
+    #fff 0%, #ffdd00 40%, #ff8800 80%, transparent 100%
+  );
+  border-radius:50% 50% 30% 30%;
+  animation: flicker .35s ease-in-out infinite alternate;
+  margin-bottom:1px;
+}
+
+.candle-body { width:8px; height:28px; border-radius:3px; }
+
+.hbd-letter {
+  font-family: var(--f-head);
+  font-size: clamp(28px, 7.5vw, 56px);
+  font-weight: 900;
+  color: var(--acc);
+  text-shadow: var(--glow-m);
+  display: inline-block;
+  animation: letterBob 3s ease-in-out infinite;
+}
+.hbd-letter:nth-child(2) { animation-delay:.08s; }
+.hbd-letter:nth-child(3) { animation-delay:.16s; }
+.hbd-letter:nth-child(4) { animation-delay:.24s; }
+.hbd-letter:nth-child(5) { animation-delay:.32s; }
+.hbd-letter:nth-child(6) { animation-delay:.40s; }
+.hbd-letter:nth-child(7) { animation-delay:.48s; }
+.hbd-letter:nth-child(8) { animation-delay:.56s; }
+
+.hbd-name {
+  font-family: var(--f-head);
+  font-size: clamp(20px, 5.5vw, 42px);
+  font-weight: 900;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  color: var(--acc);
+}
+.hbd-name.show {
+  animation: scaleIn .65s var(--ease-bounce) forwards,
+             glowPulse 2.5s ease-in-out .7s infinite;
+}
+
+.hbd-sub {
+  font-family: var(--f-body);
+  font-size: clamp(9px, 2.2vw, 13px);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+
+/* ───────────────────────────────────────────────────
+   7. SCENE 3 — CAROUSEL
+─────────────────────────────────────────────────── */
+.card {
+  position: relative;
+  z-index: 10;
+  width: min(92vw, 420px);
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 18px;
+  padding: 20px 20px 22px;
+  backdrop-filter: blur(10px);
+  animation: cardIn .8s var(--ease-bounce) both;
+}
+
+.card-head {
+  font-family: var(--f-head);
+  font-size: clamp(15px, 4vw, 22px);
+  font-weight: 900;
+  color: var(--acc);
+  text-shadow: var(--glow-s);
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  text-align: center;
+  margin-bottom: 13px;
+}
+.card-head span {
+  display: block;
+  font-family: var(--f-body);
+  font-size: clamp(9px,2vw,11px);
+  color: var(--muted);
+  letter-spacing: 4px;
+  font-weight: normal;
+  text-shadow: none;
+  margin-top: 4px;
+}
+
+.slider-wrap {
+  position: relative;
+  width: 100%;
+  height: 340px;
+  min-height: 200px;
+  max-height: 520px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #000;
+}
+
+.slider-track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  transition: transform .55s var(--ease-smooth);
+  will-change: transform;
+}
+
+.slide {
+  flex: 0 0 100%;
+  min-width: 100%;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 10px;
+  position: relative;
+  background: #000;
+}
+
+.slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center center;
+  display: block;
+  background: #000;
+  transition: transform .4s ease;
+}
+.slide img:hover { transform: scale(1.03); }
+
+.nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--acc-60);
+  background: rgba(0,0,0,.55);
+  color: var(--white);
+  font-size: 16px;
+  cursor: pointer;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  transition: background .2s, border-color .2s, transform .2s;
+}
+.nav:hover {
+  background: var(--acc-60);
+  border-color: var(--acc);
+  transform: translateY(-50%) scale(1.12);
+}
+.prev { left:8px; }
+.next { right:8px; }
+
+.dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.dot {
+  height: 6px;
+  width: 6px;
+  border-radius: 3px;
+  background: rgba(255,255,255,.18);
+  border: 1px solid var(--acc-30);
+  cursor: pointer;
+  transition: width .3s ease, background .3s ease;
+}
+.dot.active {
+  width: 20px;
+  background: var(--acc);
+  border-color: var(--acc);
+}
+
+.cta {
+  display: block;
+  width: 100%;
+  margin-top: 13px;
+  padding: 11px;
+  background: transparent;
+  border: 1.5px solid var(--acc-60);
+  border-radius: 50px;
+  font-family: var(--f-head);
+  font-size: clamp(10px, 2.5vw, 13px);
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--acc);
+  text-shadow: var(--glow-s);
+  cursor: pointer;
+  transition: background .25s, border-color .25s, transform .2s, box-shadow .25s;
+}
+.cta:hover {
+  background: var(--acc-12);
+  border-color: var(--acc);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 22px rgba(45, 73, 255, 0.35);
+}
+
+.heart-float {
+  position: absolute;
+  color: var(--acc);
+  pointer-events: none;
+  animation: heartRise 4s ease-out forwards;
+  z-index: 6;
+}
+
+
+
+
+/* Wrapper full-screen untuk scene 4 */
+.love-scene-wrap {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 0 8px;
+}
+
+.love-title {
+  font-family: var(--f-head);
+  font-size: clamp(13px, 3.8vw, 22px);
+  font-weight: 900;
+  color: var(--acc);
+  text-shadow: var(--glow-s);
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  animation: fadeUp .8s var(--ease-bounce) both;
+  flex-shrink: 0;
+}
+
+/*
+  #heart-stage:
+  - position: relative  → wajib agar child absolute terpasang ke sini
+  - display: block       → bukan flex, agar absolute children bisa
+                           diposisikan bebas
+  - width & height       → diset JS berdasarkan ruang yang tersedia
+  - margin: 0 auto       → horizontal centering cadangan
+  - flex-shrink: 0       → jangan dikecilkan oleh flex parent
+*/
+#heart-stage {
+  position: relative;
+  display: block;
+  flex-shrink: 0;
+  margin: 0 auto;
+  /* width & height diset JS */
+}
+
+/*
+  .love-photo:
+  - position: absolute   → diposisikan JS berdasarkan titik hati
+  - border-radius: 50%   → lingkaran
+  - overflow: hidden      → crop gambar ke bentuk lingkaran
+  - box-sizing: border-box → border tidak menambah ukuran
+  - width & height        → diset JS (lebih besar dari sebelumnya)
+  - animasi: photoIn dengan delay bertahap → muncul satu per satu
+*/
+.love-photo {
+  position: absolute;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2.5px solid var(--acc-60);
+  box-sizing: border-box;
+  box-shadow:
+    0 0 12px rgba(45, 122, 255, 0.7),
+    0 0 28px rgba(45, 97, 255, 0.35),
+    0 0 55px rgba(45, 83, 255, 0.15);
+  opacity: 0;
+  transform: scale(0) rotate(-15deg);
+  /* animation-delay diset JS per foto */
+  animation-name: photoIn;
+  animation-duration: 0.55s;
+  animation-timing-function: cubic-bezier(.34,1.56,.64,1);
+  animation-fill-mode: forwards;
+}
+
+/*
+  img di dalam .love-photo:
+  - width & height 100%        → ikuti ukuran container
+  - object-fit: cover          → isi penuh lingkaran, crop proporsional
+  - object-position: center    → crop dari tengah
+  - display: block             → hapus inline spacing
+*/
+.love-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  display: block;
+}
+
+.ghost-btn {
+  padding: 9px 28px;
+  background: transparent;
+  border: 1.5px solid var(--acc-30);
+  border-radius: 50px;
+  color: var(--muted);
+  font-family: var(--f-body);
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all .3s;
+  flex-shrink: 0;
+}
+.ghost-btn:hover {
+  background: var(--acc-12);
+  border-color: var(--acc);
+  color: var(--white);
+}
+
+
+/* ───────────────────────────────────────────────────
+   9. KEYFRAMES
+─────────────────────────────────────────────────── */
+
+@keyframes ripple {
+  from { transform:scale(1);    opacity:.8; }
+  to   { transform:scale(1.75); opacity:0;  }
+}
+
+@keyframes pop {
+  from { transform:scale(.2);  opacity:0; }
+  to   { transform:scale(1);   opacity:1; }
+}
+@keyframes slideUp {
+  from { transform:translateY(55px); opacity:0; }
+  to   { transform:translateY(0);    opacity:1; }
+}
+
+@keyframes fromTop {
+  0%   { transform:translateY(-48px) scale(.82); opacity:0; }
+  65%  { transform:translateY(5px)   scale(1.03); opacity:1; }
+  100% { transform:translateY(0)     scale(1);    opacity:1; }
+}
+@keyframes fromLeft {
+  0%   { transform:translateX(-60px) scale(.82); opacity:0; }
+  65%  { transform:translateX(6px)   scale(1.03); opacity:1; }
+  100% { transform:translateX(0)     scale(1);    opacity:1; }
+}
+@keyframes fromRight {
+  0%   { transform:translateX(60px) scale(.82); opacity:0; }
+  65%  { transform:translateX(-6px) scale(1.03); opacity:1; }
+  100% { transform:translateX(0)    scale(1);    opacity:1; }
+}
+@keyframes scaleIn {
+  0%   { transform:scale(.4);    opacity:0; }
+  65%  { transform:scale(1.06);  opacity:1; }
+  100% { transform:scale(1);     opacity:1; }
+}
+@keyframes fadeUp {
+  from { transform:translateY(26px); opacity:0; }
+  to   { transform:translateY(0);    opacity:1; }
+}
+@keyframes letterBob {
+  0%,100% { transform:translateY(0); }
+  50%      { transform:translateY(-5px); }
+}
+@keyframes flicker {
+  from { transform:scaleX(1) scaleY(1) rotate(-2deg); opacity:.9; }
+  to   { transform:scaleX(.84) scaleY(1.12) rotate(2deg); opacity:1; }
+}
+@keyframes glowPulse {
+  0%,100% { text-shadow: var(--glow-s); }
+  50%      { text-shadow: var(--glow-l); }
+}
+
+@keyframes cardIn {
+  from { transform:scale(.78) translateY(38px); opacity:0; }
+  to   { transform:scale(1)   translateY(0);    opacity:1; }
+}
+@keyframes heartRise {
+  0%   { transform:translateY(0)      scale(1);  opacity:.8; }
+  100% { transform:translateY(-260px) scale(.3); opacity:0;  }
+}
+
+/*
+  photoIn — animasi muncul satu per satu (dipakai .love-photo)
+  Lebih dramatis: rotate sedikit, scale dari 0 ke 1, fade in
+*/
+@keyframes photoIn {
+  0%   { opacity:0; transform:scale(0)    rotate(-15deg); }
+  60%  { opacity:1; transform:scale(1.12) rotate(3deg);   }
+  80%  { opacity:1; transform:scale(0.95) rotate(-1deg);  }
+  100% { opacity:1; transform:scale(1)    rotate(0deg);   }
+}
